@@ -9,10 +9,6 @@ import time
 import filecmp
 from pathlib import Path
 
-# ================================
-# CONFIG
-# ================================
-
 GITHUB_USER = "ProdHallow"
 GITHUB_REPO = "StereoInstaller"
 GITHUB_BRANCH = "main"
@@ -23,15 +19,9 @@ LOCALAPPDATA = os.getenv("LOCALAPPDATA")
 TEMP_DIR = os.getenv("TEMP")
 
 if getattr(sys, "frozen", False):
-    # Running as exe
     SCRIPT_DIR = Path(sys.executable).parent
 else:
-    # Running as normal script
     SCRIPT_DIR = Path(__file__).parent
-
-# ================================
-# COLORS
-# ================================
 
 class Color:
     GREEN = "\033[32m"
@@ -39,10 +29,6 @@ class Color:
     YELLOW = "\033[33m"
     CYAN = "\033[36m"
     RESET = "\033[0m"
-
-# ================================
-# AUTO-UPDATE
-# ================================
 
 def download_with_progress(url, dest):
     with urllib.request.urlopen(url) as response:
@@ -65,14 +51,12 @@ def auto_update():
     update_url = "https://raw.githubusercontent.com/ProdHallow/StereoInstaller/refs/heads/main/installer.py"
     temp_file = Path(TEMP_DIR) / "stereo_update.tmp"
     current_file = Path(sys.executable if getattr(sys, "frozen", False) else __file__)
-
     print("Checking for updates...")
     try:
         download_with_progress(update_url, temp_file)
     except Exception as e:
         print(f"[UPDATE ERROR] Could not download update: {e}")
         return
-
     if not temp_file.exists() or not filecmp.cmp(str(temp_file), str(current_file)):
         print("New update found! Applying update...")
         try:
@@ -86,10 +70,6 @@ def auto_update():
     else:
         print("You are already on the latest version.")
         temp_file.unlink(missing_ok=True)
-
-# ================================
-# HELPER FUNCTIONS
-# ================================
 
 def progress_bar(msg, length=25, delay=0.05):
     bar = ""
@@ -141,7 +121,6 @@ def create_startup_shortcut():
     startup_folder = Path(APPDATA) / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "Startup"
     shortcut_path = startup_folder / "DiscordVoiceFixer.lnk"
     batch_path = Path(sys.executable if getattr(sys, "frozen", False) else __file__).resolve()
-
     vbs_file = Path(TEMP_DIR) / "createShortcut.vbs"
     with open(vbs_file, "w") as f:
         f.write(f"""Set WshShell = WScript.CreateObject("WScript.Shell")
@@ -152,7 +131,10 @@ Shortcut.WindowStyle = 1
 Shortcut.Save
 """)
     subprocess.run(["cscript", "//nologo", str(vbs_file)])
-    vbs_file.unlink(missing_ok=True)
+    try:
+        vbs_file.unlink()
+    except FileNotFoundError:
+        pass
     print(f"{Color.GREEN}[SUCCESS]{Color.RESET} Startup shortcut created.")
 
 def quit_discord():
@@ -164,41 +146,30 @@ def launch_discord(appPath):
     subprocess.Popen([str(appPath / "Discord.exe")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     print(f"{Color.GREEN}[DONE]{Color.RESET} All tasks completed.")
 
-# ================================
-# MAIN SCRIPT
-# ================================
-
 if __name__ == "__main__":
     auto_update()
-
     print(f"{Color.CYAN}===========================================")
     print("      Discord Voice Module Auto-Fixer")
     print(f"==========================================={Color.RESET}\n")
-
     quit_discord()
-
     appPath = find_latest_discord_build()
     if not appPath:
         print(f"{Color.RED}[ERROR]{Color.RESET} No Discord app-* folder with voice module found.")
         input("Press Enter to exit...")
         sys.exit(1)
     print(f"{Color.GREEN}[FOUND]{Color.RESET} Using Discord folder: {Color.CYAN}{appPath}{Color.RESET}\n")
-
     voice_module = find_discord_voice_module(appPath)
     if not voice_module:
         print(f"{Color.RED}[ERROR]{Color.RESET} No discord_voice module found.")
         input("Press Enter to exit...")
         sys.exit(1)
-
     backup_folder = next(SCRIPT_DIR.glob("Discord*Backup"), None)
     if not backup_folder:
         print(f"{Color.RED}[ERROR]{Color.RESET} Backup folder not found next to the script.")
         input("Press Enter to exit...")
         sys.exit(1)
-
     copy_backup_to_target(backup_folder, voice_module)
     replace_ffmpeg(appPath)
     create_startup_shortcut()
     launch_discord(appPath)
-
     input("Press Enter to exit...")
