@@ -130,25 +130,7 @@ def replace_ffmpeg(appPath):
         print(f"{Color.RED}[ERROR]{Color.RESET} Failed to copy ffmpeg.dll: {e}")
         return False
 
-def create_startup_shortcut():
-    startup_folder = Path(APPDATA) / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "Startup"
-    shortcut_path = startup_folder / "DiscordVoiceFixer.lnk"
-    batch_path = Path(sys.executable if getattr(sys, "frozen", False) else __file__).resolve()
-    vbs_file = Path(TEMP_DIR) / "createShortcut.vbs"
-    with open(vbs_file, "w") as f:
-        f.write(f"""Set WshShell = WScript.CreateObject("WScript.Shell")
-Set Shortcut = WshShell.CreateShortcut("{shortcut_path}")
-Shortcut.TargetPath = "{batch_path}"
-Shortcut.WorkingDirectory = "{SCRIPT_DIR}"
-Shortcut.WindowStyle = 1
-Shortcut.Save
-""")
-    subprocess.run(["cscript", "//nologo", str(vbs_file)])
-    try:
-        vbs_file.unlink()
-    except FileNotFoundError:
-        pass
-    print(f"{Color.GREEN}[SUCCESS]{Color.RESET} Startup shortcut created.")
+# Removed create_startup_shortcut()
 
 def quit_discord():
     subprocess.run(["taskkill", "/F", "/IM", "discord.exe"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -183,6 +165,6 @@ if __name__ == "__main__":
         sys.exit(1)
     copy_backup_to_target(backup_folder, voice_module)
     replace_ffmpeg(appPath)
-    create_startup_shortcut()
+    # Removed create_startup_shortcut() call
     launch_discord(appPath)
     input("Press Enter to exit...")
