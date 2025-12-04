@@ -48,7 +48,7 @@ def download_with_progress(url, dest):
     print("\nDownload complete.")
 
 def auto_update():
-    update_url = "https://raw.githubusercontent.com/ProdHallow/StereoInstaller/refs/heads/main/installer.py"
+    update_url = f"https://raw.githubusercontent.com/{GITHUB_USER}/{GITHUB_REPO}/refs/heads/{GITHUB_BRANCH}/{SCRIPT_NAME}"
     temp_file = Path(TEMP_DIR) / "stereo_update.tmp"
     current_file = Path(sys.executable if getattr(sys, "frozen", False) else __file__)
     print("Checking for updates...")
