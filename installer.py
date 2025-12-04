@@ -12,7 +12,7 @@ from pathlib import Path
 GITHUB_USER = "ProdHallow"
 GITHUB_REPO = "StereoInstaller"
 GITHUB_BRANCH = "main"
-SCRIPT_NAME = "Stereo Installer.py"
+SCRIPT_NAME = "installer.py"
 
 APPDATA = os.getenv("APPDATA")
 LOCALAPPDATA = os.getenv("LOCALAPPDATA")
