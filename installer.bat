@@ -34,25 +34,32 @@
 @echo off
 
 :: =====================================================
-:: AUTO-UPDATE SYSTEM (BITSADMIN VERSION)
+:: AUTO-UPDATE SYSTEM (RELIABLE)
 :: =====================================================
 setlocal enabledelayedexpansion
 
 echo Checking for updates...
 
-:: GitHub RAW URL (must be accessible)
-set "updateURL=[https://raw.githubusercontent.com/ProdHallow/StereoInstaller/main/installer](https://raw.githubusercontent.com/ProdHallow/StereoInstaller/main/installer)"
+:: GitHub RAW URL (with proper .bat extension)
+set "updateURL=[https://raw.githubusercontent.com/ProdHallow/StereoInstaller/main/installer.bat](https://raw.githubusercontent.com/ProdHallow/StereoInstaller/main/installer.bat)"
 
 :: Temp file for checking updates
 set "tempFile=%temp%\stereo_update.tmp"
 
 echo Downloading latest script from GitHub...
 
-:: Use BITSADMIN to download the file
+:: Try PowerShell first
+powershell -NoProfile -Command ^
+"try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri '%updateURL%' -OutFile '%tempFile%' -UseBasicParsing } catch { exit 1 }"
+
+:: If download failed, fallback to BITSADMIN
+if not exist "%tempFile%" (
+echo PowerShell download failed, trying BITSADMIN...
 bitsadmin /transfer "UpdateDownload" /download /priority normal "%updateURL%" "%tempFile%" >nul 2>&1
+)
 
 if not exist "%tempFile%" (
-echo %RED%[UPDATE ERROR]%RESET% Failed to download update info using BITSADMIN.
+echo [UPDATE ERROR] Failed to download update info.
 echo Make sure you are connected to the internet and the URL is correct.
 pause
 exit /b
