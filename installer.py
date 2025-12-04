@@ -12,7 +12,7 @@ from pathlib import Path
 GITHUB_USER = "ProdHallow"
 GITHUB_REPO = "StereoInstaller"
 GITHUB_BRANCH = "main"
-SCRIPT_NAME = "installer.py"
+SCRIPT_NAME = "Stereo Installer.py"
 
 APPDATA = os.getenv("APPDATA")
 LOCALAPPDATA = os.getenv("LOCALAPPDATA")
@@ -59,14 +59,27 @@ def auto_update():
         return
     if not temp_file.exists() or not filecmp.cmp(str(temp_file), str(current_file)):
         print("New update found! Applying update...")
-        try:
+
+        if getattr(sys, "frozen", False):
+            # Create a batch script to replace the executable
+            batch_path = Path(TEMP_DIR) / "update.bat"
+            with open(batch_path, "w") as f:
+                f.write(f"""@echo off
+timeout /t 1 /nobreak >nul
+copy /y "{temp_file}" "{current_file}"
+start "" "{current_file}"
+del "%~f0"
+""")
+            # Run the batch script
+            subprocess.Popen([str(batch_path)])
+            print("Update scheduled. Exiting...")
+            sys.exit(0)
+        else:
+            # For script files, replace and restart
             shutil.copy2(str(temp_file), str(current_file))
             print("Update applied. Restarting script...")
             temp_file.unlink(missing_ok=True)
             os.execv(sys.executable, [sys.executable, str(current_file)])
-        except Exception as e:
-            print(f"[UPDATE ERROR] Could not replace script: {e}")
-            sys.exit(1)
     else:
         print("You are already on the latest version.")
         temp_file.unlink(missing_ok=True)
