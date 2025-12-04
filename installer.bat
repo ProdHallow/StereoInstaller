@@ -34,59 +34,30 @@
 @echo off
 
 :: =====================================================
-:: AUTO-UPDATE SYSTEM WITH PROGRESS BAR
+:: AUTO-UPDATE SYSTEM (CURL VERSION)
 :: =====================================================
 setlocal enabledelayedexpansion
 
 echo Checking for updates...
 
-:: Correct GitHub RAW URL
+:: GitHub RAW URL (must be correct)
 set "updateURL=[https://raw.githubusercontent.com/ProdHallow/StereoInstaller/main/installer.bat](https://raw.githubusercontent.com/ProdHallow/StereoInstaller/main/installer.bat)"
 
 :: Temp file for checking updates
 set "tempFile=%temp%\stereo_update.tmp"
 
-:: ===========================
-:: Download with PowerShell
-:: ===========================
 echo Downloading latest script from GitHub...
-set "downloadSuccess=0"
 
-powershell -NoProfile -Command ^
-"try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri '%updateURL%' -OutFile '%tempFile%' -UseBasicParsing } catch { exit 1 }"
+:: Use curl to download
+curl -s -L "%updateURL%" -o "%tempFile%"
 
-if exist "%tempFile%" set "downloadSuccess=1"
-
-:: ===========================
-:: Fallback: BITSADMIN
-:: ===========================
-if %downloadSuccess%==0 (
-echo PowerShell failed, trying BITSADMIN...
-bitsadmin /transfer "UpdateDownload" /download /priority normal "%updateURL%" "%tempFile%" >nul 2>&1
-if exist "%tempFile%" set "downloadSuccess=1"
-)
-
-if %downloadSuccess%==0 (
+if not exist "%tempFile%" (
 echo [UPDATE ERROR] Failed to download update info.
 echo Make sure you are connected to the internet and the URL is correct.
 pause
 exit /b
 )
 
-:: ===========================
-:: Simple animated progress bar
-:: ===========================
-set "msg=Downloading..."
-for /l %%i in (1,1,20) do (
-set "bar=!bar!█"
-<nul set /p "= [!bar!] %msg%`r"
-ping -n 1 -w 50 127.0.0.1 >nul
-)
-echo.
-
-:: ===========================
-:: Compare and update
-:: ===========================
 echo Comparing local script to GitHub version...
 fc "%tempFile%" "%~f0" >nul
 
