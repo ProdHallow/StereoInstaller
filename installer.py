@@ -18,8 +18,9 @@ APPDATA = os.getenv("APPDATA")
 LOCALAPPDATA = os.getenv("LOCALAPPDATA")
 TEMP_DIR = os.getenv("TEMP")
 
+# Adjust SCRIPT_DIR for PyInstaller
 if getattr(sys, "frozen", False):
-    SCRIPT_DIR = Path(sys.executable).parent
+    SCRIPT_DIR = Path(sys._MEIPASS)  # PyInstaller temporary folder
 else:
     SCRIPT_DIR = Path(__file__).parent
 
@@ -121,7 +122,7 @@ def copy_backup_to_target(source, target):
     shutil.copytree(source, target)
     for i in range(0, 101, 10):
         print_progress(i, 100, "Updating module files...")
-        time.sleep(0.1)
+        time.sleep(0.05)
     print()
     return True
 
