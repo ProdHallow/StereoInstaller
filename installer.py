@@ -30,6 +30,25 @@ class Color:
     CYAN = "\033[36m"
     RESET = "\033[0m"
 
+def print_success(message):
+    print(f"{Color.GREEN}[SUCCESS]{Color.RESET} {message}")
+
+def print_error(message):
+    print(f"{Color.RED}[ERROR]{Color.RESET} {message}")
+
+def print_info(message):
+    print(f"{Color.CYAN}[INFO]{Color.RESET} {message}")
+
+def print_warning(message):
+    print(f"{Color.YELLOW}[WARNING]{Color.RESET} {message}")
+
+def print_progress(current, total, message=''):
+    percent = int((current / total) * 100)
+    bar_length = 30
+    filled_length = int(bar_length * percent // 100)
+    bar = '█' * filled_length + '-' * (bar_length - filled_length)
+    print(f"\r{Color.CYAN}[{bar}] {percent}% {Color.RESET} {message}", end='', flush=True)
+
 def download_with_progress(url, dest):
     with urllib.request.urlopen(url) as response:
         total_size = int(response.getheader("Content-Length").strip())
@@ -40,28 +59,25 @@ def download_with_progress(url, dest):
                 buffer = response.read(block_size)
                 if not buffer:
                     break
-                downloaded += len(buffer)
                 f.write(buffer)
-                done = int(25 * downloaded / total_size)
-                bar = "█" * done + "-" * (25 - done)
-                print(f"\r[{bar}] Downloading update... {downloaded*100//total_size}%", end="")
-    print("\nDownload complete.")
+                downloaded += len(buffer)
+                print_progress(downloaded, total_size, "Downloading update...")
+    print()
+    print_success("Download complete.")
 
 def auto_update():
     update_url = f"https://raw.githubusercontent.com/{GITHUB_USER}/{GITHUB_REPO}/refs/heads/{GITHUB_BRANCH}/{SCRIPT_NAME}"
     temp_file = Path(TEMP_DIR) / "stereo_update.tmp"
     current_file = Path(sys.executable if getattr(sys, "frozen", False) else __file__)
-    print("Checking for updates...")
+    print_info("Checking for updates...")
     try:
         download_with_progress(update_url, temp_file)
     except Exception as e:
-        print(f"[UPDATE ERROR] Could not download update: {e}")
+        print_error(f"Could not download update: {e}")
         return
     if not temp_file.exists() or not filecmp.cmp(str(temp_file), str(current_file)):
-        print("New update found! Applying update...")
-
+        print_info("New update found! Applying update...")
         if getattr(sys, "frozen", False):
-            # Create a batch script to replace the executable
             batch_path = Path(TEMP_DIR) / "update.bat"
             with open(batch_path, "w") as f:
                 f.write(f"""@echo off
@@ -70,27 +86,17 @@ copy /y "{temp_file}" "{current_file}"
 start "" "{current_file}"
 del "%~f0"
 """)
-            # Run the batch script
             subprocess.Popen([str(batch_path)])
-            print("Update scheduled. Exiting...")
+            print_info("Update scheduled. Exiting...")
             sys.exit(0)
         else:
-            # For script files, replace and restart
             shutil.copy2(str(temp_file), str(current_file))
-            print("Update applied. Restarting script...")
+            print_info("Update applied. Restarting script...")
             temp_file.unlink(missing_ok=True)
             os.execv(sys.executable, [sys.executable, str(current_file)])
     else:
-        print("You are already on the latest version.")
+        print_info("You are already on the latest version.")
         temp_file.unlink(missing_ok=True)
-
-def progress_bar(msg, length=25, delay=0.05):
-    bar = ""
-    for _ in range(length):
-        bar += "█"
-    print(f"{Color.CYAN}[{bar}]{Color.RESET} {msg}\r", end="")
-    time.sleep(delay)
-    print()
 
 def find_latest_discord_build():
     base = Path(LOCALAPPDATA) / "Discord"
@@ -108,29 +114,30 @@ def find_discord_voice_module(appPath):
 
 def copy_backup_to_target(source, target):
     if not source.exists():
-        print(f"{Color.RED}[ERROR]{Color.RESET} Backup folder not found: {source}")
+        print_error(f"Backup folder not found: {source}")
         return False
-    print(f"{Color.GREEN}[FOUND]{Color.RESET} Backup folder: {source}")
+    print_success(f"Backup folder found: {source}")
     shutil.rmtree(target, ignore_errors=True)
     shutil.copytree(source, target)
-    progress_bar("Updating module files...")
+    for i in range(0, 101, 10):
+        print_progress(i, 100, "Updating module files...")
+        time.sleep(0.1)
+    print()
     return True
 
 def replace_ffmpeg(appPath):
     ffmpeg_source = next(SCRIPT_DIR.rglob("ffmpeg.dll"), None)
     if not ffmpeg_source:
-        print(f"{Color.RED}[ERROR]{Color.RESET} ffmpeg.dll not found.")
+        print_error("ffmpeg.dll not found.")
         return False
     ffmpeg_target = appPath / "ffmpeg.dll"
     try:
         shutil.copy2(ffmpeg_source, ffmpeg_target)
-        print(f"{Color.GREEN}[SUCCESS]{Color.RESET} ffmpeg.dll replaced.")
+        print_success("ffmpeg.dll replaced.")
         return True
     except Exception as e:
-        print(f"{Color.RED}[ERROR]{Color.RESET} Failed to copy ffmpeg.dll: {e}")
+        print_error(f"Failed to copy ffmpeg.dll: {e}")
         return False
-
-# Removed create_startup_shortcut()
 
 def quit_discord():
     subprocess.run(["taskkill", "/F", "/IM", "discord.exe"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -139,7 +146,8 @@ def quit_discord():
 
 def launch_discord(appPath):
     subprocess.Popen([str(appPath / "Discord.exe")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    print(f"{Color.GREEN}[DONE]{Color.RESET} All tasks completed.")
+    print_success("Discord relaunched.")
+    print("All tasks completed.")
 
 if __name__ == "__main__":
     auto_update()
@@ -149,22 +157,21 @@ if __name__ == "__main__":
     quit_discord()
     appPath = find_latest_discord_build()
     if not appPath:
-        print(f"{Color.RED}[ERROR]{Color.RESET} No Discord app-* folder with voice module found.")
+        print_error("No Discord app-* folder with voice module found.")
         input("Press Enter to exit...")
         sys.exit(1)
-    print(f"{Color.GREEN}[FOUND]{Color.RESET} Using Discord folder: {Color.CYAN}{appPath}{Color.RESET}\n")
+    print_success(f"Using Discord folder: {appPath}")
     voice_module = find_discord_voice_module(appPath)
     if not voice_module:
-        print(f"{Color.RED}[ERROR]{Color.RESET} No discord_voice module found.")
+        print_error("No discord_voice module found.")
         input("Press Enter to exit...")
         sys.exit(1)
     backup_folder = next(SCRIPT_DIR.glob("Discord*Backup"), None)
     if not backup_folder:
-        print(f"{Color.RED}[ERROR]{Color.RESET} Backup folder not found next to the script.")
+        print_error("Backup folder not found next to the script.")
         input("Press Enter to exit...")
         sys.exit(1)
     copy_backup_to_target(backup_folder, voice_module)
     replace_ffmpeg(appPath)
-    # Removed create_startup_shortcut() call
     launch_discord(appPath)
     input("Press Enter to exit...")
