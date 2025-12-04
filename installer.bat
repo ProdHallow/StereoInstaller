@@ -34,31 +34,37 @@
 @echo off
 
 :: =====================================================
-:: AUTO-UPDATE SYSTEM (CURL VERSION)
+:: AUTO-UPDATE SYSTEM
 :: =====================================================
 setlocal enabledelayedexpansion
-
-echo Checking for updates...
 
 :: GitHub RAW URL (must be correct)
 set "updateURL=[https://raw.githubusercontent.com/ProdHallow/StereoInstaller/main/installer.bat](https://raw.githubusercontent.com/ProdHallow/StereoInstaller/main/installer.bat)"
 
-:: Temp file for checking updates
+:: Temp file to store the downloaded update
 set "tempFile=%temp%\stereo_update.tmp"
 
-echo Downloading latest script from GitHub...
+echo Checking for updates...
 
-:: Use curl to download
-curl -s -L "%updateURL%" -o "%tempFile%"
+:: Try using PowerShell to download the latest version
+powershell -NoProfile -Command ^
+"try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri '%updateURL%' -OutFile '%tempFile%' -UseBasicParsing } catch { exit 1 }"
 
+:: Check if download succeeded
 if not exist "%tempFile%" (
-echo [UPDATE ERROR] Failed to download update info.
+echo PowerShell download failed, trying curl...
+curl -s -L "%updateURL%" -o "%tempFile%"
+)
+
+:: Final check if file exists
+if not exist "%tempFile%" (
+echo [UPDATE ERROR] Could not download the update.
 echo Make sure you are connected to the internet and the URL is correct.
 pause
 exit /b
 )
 
-echo Comparing local script to GitHub version...
+:: Compare the downloaded file to the current script
 fc "%tempFile%" "%~f0" >nul
 
 if %errorlevel% NEQ 0 (
@@ -74,7 +80,7 @@ echo You are already on the latest version.
 del "%tempFile%" >nul 2>&1
 )
 
-echo Press any key to continue.
+echo Press any key to continue...
 pause >nul
 endlocal
 
